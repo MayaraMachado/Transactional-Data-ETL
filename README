@@ -1,0 +1,6 @@
+## Etapas do Pipeline
+
+
+- Gerar dados simulados: Usamos Python para criar um arquivo CSV com dados fictícios de vendas.
+- Processar dados com PySpark: Executamos transformações, como filtros e agregações, usando PySpark.
+- Carregar dados no PostgreSQL: Escrevemos os dados processados no banco PostgreSQL.
