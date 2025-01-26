@@ -1,6 +1,83 @@
-## Etapas do Pipeline
+# Transactional Data ETL
 
+Este projeto tem como objetivo a construção de uma plataforma de engenharia de dados de ponta a ponta, integrando ingestão de dados, armazenamento, processamento e análise, aproveitando diversas ferramentas e tecnologias.
 
-- Gerar dados simulados: Usamos Python para criar um arquivo CSV com dados fictícios de vendas.
-- Processar dados com PySpark: Executamos transformações, como filtros e agregações, usando PySpark.
-- Carregar dados no PostgreSQL: Escrevemos os dados processados no banco PostgreSQL.
+## Descrição do Projeto
+
+### 1. Construção de uma plataforma de engenharia de dados end-to-end
+O objetivo principal deste projeto é construir uma plataforma completa para **engenharia de dados** que integra as etapas de **ingestão de dados**, **armazenamento**, **processamento** e **análise**. Através de várias ferramentas e tecnologias, a plataforma será capaz de lidar com dados de transações financeiras, realizar transformações de dados em tempo real, e gerar insights para análise.
+
+### 2. Fluxo de Dados
+- **Leitura de dados de pagamento a partir de um PostgreSQL**: Os dados de pagamento serão extraídos de um banco de dados PostgreSQL.
+- **Transformação**: Usaremos **PySpark** para realizar as transformações necessárias, incluindo agregações e modelagem dos dados.
+- **Armazenamento em Data Warehouse (Warehouse)**: Após a transformação, os dados serão armazenados em um **data warehouse** (DuckDB).
+- **Analytics**: Como ponto final do processo, a análise será realizada utilizando **Metabase**, um painel interativo de visualização de dados, que conectará diretamente ao data warehouse para gerar relatórios e dashboards.
+
+### 3. Tecnologias Utilizadas
+- **Airflow**: Usado para orquestrar o pipeline de dados, agendar e monitorar as tarefas de ingestão, transformação e armazenamento de dados.
+- **PySpark**: Usado para processar grandes volumes de dados de forma distribuída e realizar transformações complexas.
+- **PostgreSQL**: Banco de dados relacional utilizado para armazenar os dados de transações financeiras.
+- **DuckDB**: Data warehouse orientado a colunas que armazena os dados transformados para análise de grandes volumes.
+- **Metabase**: Ferramenta de visualização e criação de dashboards que irá fornecer insights dos dados analisados.
+
+## Estrutura do Projeto
+
+O projeto está organizado de acordo com as seguintes pastas e arquivos:
+
+```plaintext
+Transactional-Data-ETL/
+│
+├── airflow/                  # Contém os DAGs para orquestração do pipeline com Airflow
+│   └── dags/
+│       ├── data_ingestion.py  # DAG para ingestão de dados do Postgres
+│       ├── data_processing.py # DAG para transformação dos dados com PySpark
+│       └── data_storage.py    # DAG para armazenar dados no DuckDB
+│
+├── pyspark_pipelines/        # Contém os pipelines de processamento com PySpark
+│   ├── transform_data.py      # Script para transformação dos dados com PySpark
+│   ├── aggregation.py         # Script para agregações de dados
+│   └── utils.py               # Funções auxiliares para o processamento
+│
+├── tests/                    # Contém os testes da aplicação
+│   ├── test_data_ingestion.py # Testes da ingestão de dados
+│   ├── test_data_processing.py# Testes do processamento de dados com PySpark
+│   └── test_data_storage.py   # Testes da etapa de armazenamento dos dados
+│
+├── .env                      # Arquivo para variáveis de ambiente
+├── docker-compose.yml         # Arquivo Docker Compose para orquestrar os containers
+├── pyproject.toml             # Arquivo de dependências do projeto (com Poetry)
+├── requirements.txt           # Arquivo de dependências para instalação via pip
+└── README.md                  # Este arquivo de descrição do projeto
+```
+
+## Como Rodar o Projeto
+
+### 1. Pré-requisitos
+
+Antes de executar o projeto, você precisará de:
+
+- Docker e Docker Compose instalados
+- Poetry instalado para gestão de dependências
+
+### 2. Instalação das dependências
+
+Para instalar as dependências do projeto, execute os seguintes passos:
+
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/seuusuario/Transactional-Data-ETL.git
+   cd Transactional-Data-ETL
+    ```
+
+2. Subir os containers
+    Execute o Docker Compose para rodar os containers necessários:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+3. Iniciar o Airflow
+Após a execução do Docker Compose, acesse o Airflow em http://localhost:8080. Crie e ative os DAGs para iniciar o processamento dos dados.
+
+4. Acessar o Metabase
+Acesse o Metabase em http://localhost:3000 para visualizar os dashboards gerados com base no data warehouse (DuckDB).
