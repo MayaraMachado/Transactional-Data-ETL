@@ -1,0 +1,25 @@
+# Usar a imagem base do Airflow
+FROM apache/airflow:2.7.0
+
+# Instalar dependências adicionais do sistema, caso necessário
+USER root
+RUN apt-get update && apt-get install -y \
+    curl \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Definir o usuário do Airflow
+USER airflow
+
+# Instalar dependências do Python, incluindo o provedor Apache Spark
+COPY docker_requirements.txt /requirements.txt
+RUN pip install --no-cache-dir -r /requirements.txt
+
+# Copiar seus arquivos do projeto, se necessário
+COPY ./dags /opt/airflow/dags
+COPY ./plugins /opt/airflow/plugins
+COPY ./logs /opt/airflow/logs
+
+# Definir o diretório de trabalho e as variáveis de ambiente
+WORKDIR /opt/airflow

@@ -1,0 +1,22 @@
+# Usando Python e OpenJDK para PySpark
+ARG IMAGE_VARIANT=slim-bullseye
+ARG OPENJDK_VERSION=8
+ARG PYTHON_VERSION=3.10.16
+
+FROM python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS py3
+FROM openjdk:${OPENJDK_VERSION}-${IMAGE_VARIANT}
+
+# Copia Python para a imagem do OpenJDK
+COPY --from=py3 / /
+
+# Instala PySpark
+ARG PYSPARK_VERSION=3.2.0
+RUN pip --no-cache-dir install pyspark==${PYSPARK_VERSION}
+
+# Copia o projeto e instala dependências
+COPY . /app
+WORKDIR /app
+RUN pip3 install poetry
+RUN poetry install --with dev
+
+ENTRYPOINT ["/bin/bash"]

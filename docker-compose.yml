@@ -26,47 +26,71 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   airflow-webserver:
-    image: apache/airflow:2.7.0
+    build:
+      context: ./orquestrador  # Caminho para o diretório onde está o Dockerfile.airflow
+      dockerfile: Dockerfile.airflow
     container_name: airflow-webserver
     depends_on:
       - postgres-airflow
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
-    volumes:
-      - ./dags:/opt/airflow/dags
     ports:
       - "8080:8080"
     command: >
       bash -c "
       airflow db init &&
       airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
+      airflow db upgrade &&
       airflow webserver"
 
   airflow-scheduler:
-    image: apache/airflow:2.7.0
+    build:
+      context: ./orquestrador  # Caminho para o diretório onde está o Dockerfile.airflow
+      dockerfile: Dockerfile.airflow
     container_name: airflow-scheduler
     depends_on:
       - postgres-airflow
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
-    volumes:
-      - ./dags:/opt/airflow/dags
     command: airflow scheduler
 
-  pyspark:
-    image: bitnami/spark:latest
-    container_name: pyspark
+  spark-master:
+    build:
+      context: .  # Contexto do build do Spark
+    container_name: spark-master
     environment:
-      SPARK_MASTER_HOST: pyspark
-    depends_on:
-      - postgres-data
+      SPARK_MODE: master
+      SPARK_MASTER: spark://spark-master:7077  # Isso já está correto, pois é o nome do serviço
     ports:
-      - "7077:7077"
-      - "8081:8081"
+      - "7077:7077"   # Porta para o Spark Master
+      - "8081:8081"   # Porta para a UI do Spark Master
     volumes:
-      - ./dags:/opt/airflow/dags
+      - .:/app
+    working_dir: /app
+    networks:
+      - spark-net
+
+  spark-worker:
+    build:
+      context: .  # Contexto do build do Spark
+    container_name: spark-worker
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077  # Conexão com o Spark Master usando o nome do serviço
+    depends_on:
+      - spark-master
+    ports:
+      - "8082:8082"   # UI do Spark Worker
+    volumes:
+      - .:/app
+    working_dir: /app
+    networks:
+      - spark-net
+
+networks:
+  spark-net:  # Criando uma rede para os containers de Spark
 
 volumes:
   postgres_airflow_data:
