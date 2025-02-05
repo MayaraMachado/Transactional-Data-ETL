@@ -1,0 +1,15 @@
+FROM apache/spark:latest
+
+USER root
+RUN apt-get update && apt-get install -y curl bash
+USER spark
+
+# Definir variáveis para o Master e Worker
+ARG SPARK_MODE
+
+# Se for Master, inicia como master, senão inicia como worker
+CMD if [ "$SPARK_MODE" = "master" ]; then \
+        /opt/spark/sbin/start-master.sh && tail -f /dev/null; \
+    else \
+        /opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /dev/null; \
+    fi

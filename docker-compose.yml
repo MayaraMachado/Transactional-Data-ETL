@@ -12,6 +12,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_airflow_data:/var/lib/postgresql/data
+    networks:
+      - default  # Rede padrão para acessar o Airflow
 
   postgres-data:
     image: postgres:15
@@ -24,10 +26,12 @@ services:
       - "5433:5432" # Porta 5433 mapeada para evitar conflito
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - default
 
   airflow-webserver:
     build:
-      context: ./orquestrador  # Caminho para o diretório onde está o Dockerfile.airflow
+      context: ./orquestrador
       dockerfile: Dockerfile.airflow
     container_name: airflow-webserver
     depends_on:
@@ -35,62 +39,85 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
+      SPARK_MASTER_URL: spark://spark-master:7077
+      AIRFLOW__WEBSERVER__BASE_URL: http://localhost:8080
+      AIRFLOW__WEBSERVER__SECRET_KEY: 123456
     ports:
       - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
     command: >
       bash -c "
       airflow db init &&
       airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
       airflow db upgrade &&
       airflow webserver"
+    networks:
+      - spark-net      # Conectando à rede do Spark
+      - default        # Conectando à rede padrão (acesso ao PostgreSQL)
 
   airflow-scheduler:
     build:
-      context: ./orquestrador  # Caminho para o diretório onde está o Dockerfile.airflow
+      context: ./orquestrador
       dockerfile: Dockerfile.airflow
     container_name: airflow-scheduler
     depends_on:
       - postgres-airflow
+      - airflow-webserver
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
+      SPARK_MASTER_URL: spark://spark-master:7077
+      AIRFLOW__WEBSERVER__SECRET_KEY: your_secret_key  # Adicione esta linha
+    volumes:
+      - ./orquestrador/dags:/opt/airflow/dags
+      - ./orquestrador/logs:/opt/airflow/logs
     command: airflow scheduler
+    networks:
+      - spark-net      # Conectando à rede do Spark
+      - default        # Conectando à rede padrão (acesso ao PostgreSQL)
 
   spark-master:
     build:
-      context: .  # Contexto do build do Spark
+      context: ./pyspark_pipelines
+      dockerfile: Dockerfile.spark
     container_name: spark-master
     environment:
       SPARK_MODE: master
-      SPARK_MASTER: spark://spark-master:7077  # Isso já está correto, pois é o nome do serviço
+      SPARK_MASTER_HOST: spark-master  # Adicionando essa variável para garantir que o Spark escute na rede correta
     ports:
-      - "7077:7077"   # Porta para o Spark Master
-      - "8081:8081"   # Porta para a UI do Spark Master
+      - "7077:7077"
+      - "8081:8080"
     volumes:
       - .:/app
     working_dir: /app
     networks:
-      - spark-net
+      - spark-net      # Apenas a rede Spark
 
   spark-worker:
     build:
-      context: .  # Contexto do build do Spark
+      context: ./pyspark_pipelines
+      dockerfile: Dockerfile.spark
     container_name: spark-worker
     environment:
       SPARK_MODE: worker
-      SPARK_MASTER_URL: spark://spark-master:7077  # Conexão com o Spark Master usando o nome do serviço
+      SPARK_MASTER_URL: spark://spark-master:7077
     depends_on:
       - spark-master
     ports:
-      - "8082:8082"   # UI do Spark Worker
+      - "8082:8080"
     volumes:
       - .:/app
     working_dir: /app
     networks:
-      - spark-net
+      - spark-net      # Apenas a rede Spark
 
 networks:
-  spark-net:  # Criando uma rede para os containers de Spark
+  spark-net:
+    driver: bridge
+  default:
+    driver: bridge
 
 volumes:
   postgres_airflow_data:
