@@ -1,5 +1,6 @@
 """SparkClient entity."""
-from typing import Optional
+
+from typing import Optional, List, Tuple
 
 from pyspark.sql import SparkSession
 
@@ -7,8 +8,13 @@ from pyspark.sql import SparkSession
 class SparkClient:
     """Handle Spark session connection."""
 
-    def __init__(self, session: Optional[SparkSession] = None) -> None:
+    def __init__(
+        self,
+        session: Optional[SparkSession] = None,
+        packages_list: Optional[List[Tuple[str, str]]] = None,
+    ) -> None:
         self._session = session
+        self._packages = packages_list
 
     @property
     def session(self) -> SparkSession:
@@ -33,9 +39,17 @@ class SparkClient:
 
         """
         if not self._session:
-            self._session = (
-                SparkSession.builder.appName("pyspark-pipeline")
-                .config("spark.jars.packages", "org.postgresql:postgresql:42.4.0")
-                .getOrCreate()
-            )
+            if self._packages:
+                packages = ",".join([f"{org}:{pkg}" for org, pkg in self._packages])
+                self._session = (
+                    SparkSession.builder.appName("pyspark-pipeline")
+                    .config("spark.jars.packages", packages)
+                    .getOrCreate()
+                )
+            else:
+                self._session = (
+                    SparkSession.builder.appName("pyspark-pipeline")
+                    .getOrCreate()
+                )
+
             self._session.sparkContext.setLogLevel("ERROR")
